@@ -6,7 +6,7 @@
   #Install ImageMagick from http://www.imagemagick.org/script/download.php
   #While installing change application path to C (IMPORTANT)
   #Also, select - install legacy tools
-#install.packages("plotly",dependencies = TRUE)
+#install.packages("plotly", dependencies = TRUE)
 
 #Set this turn off the scientifc notations
 options(scipen = 999)
@@ -16,14 +16,16 @@ library(ggplot2)
 library(scales)
 library(plotly)
 library(gganimate)
+library(devtools)
 
 #NHS DATA SET
 #Select Total Income & Gross Rent Province wise
-NHS.99M001X.E.2011.pumf.individuals_F1 <- read.csv("C:/Users/avaidya/NHS-99M001X-E-2011-pumf-individuals_F1.csv", header=FALSE, row.names=1)
+df <- read.csv("C:\\RViz\\NHS-99M001X-E-2011-pumf-individuals_F1.csv", header=FALSE, row.names=1)
+
 NHS_subset <- NHS.99M001X.E.2011.pumf.individuals_F1[,c("PR","TOTINC","GROSRT")]
 
 #Remove Missing Values & Aggregate TOTINC on GROSRT
-NHS_subset.agg<- aggregate(cbind(TOTINC,GROSRT)~PR,NHS_subset[!(NHS_subset$TOTINC==9999999 | NHS_subset$GROSRT==9999 | NHS_subset$GROSRT==8888),],mean)
+NHS_subset.agg <- aggregate(cbind(TOTINC,GROSRT)~PR,NHS_subset[!(NHS_subset$TOTINC==9999999 | NHS_subset$GROSRT==9999 | NHS_subset$GROSRT==8888),],mean)
 NHS_subset.agg$ProvinceName <- c("Newfoundland & Labrador","Prince Edward Island","Nova Scotia","New Brunswick","Quebec","Ontario","Manitoba","Saskatchewn","Alberta","British Columbia","Northern Canada")
 
 #Plot a bar chart of PR vs TOTINC stacked with GROSS rent
@@ -33,18 +35,18 @@ ggplot() + geom_bar(aes(y = TOTINC, x = factor(ProvinceName), fill = GROSRT),dat
 ggplot() + geom_bar(aes(y = TOTINC, x = factor(ProvinceName), fill = GROSRT),data = NHS_subset.agg,stat = "identity",position = "stack") + geom_text(data = NHS_subset.agg,aes(x = factor(ProvinceName),y = TOTINC,label=paste0(format(round(GROSRT, 2), nsmall = 2))),size = 3.5) + scale_x_discrete(labels = abbreviate) + coord_flip()
 
 #Select PR & HDGREE
-NHS_subset.degreePR<-NHS.99M001X.E.2011.pumf.individuals_F1[!(NHS.99M001X.E.2011.pumf.individuals_F1$HDGREE==88 | NHS.99M001X.E.2011.pumf.individuals_F1$HDGREE==99),c("PR","HDGREE")]
+NHS_subset.degreePR<-df[!(df$HDGREE==88 | df$HDGREE==99),c("PR","HDGREE")]
 #Find number of Observations for each HDGREE province wise
-NHS_subset.HdegreePRwise<-table(NHS_subset.degreePR)
+NHS_subset.HdegreePRwise <- table(NHS_subset.degreePR)
 
 #Select PR & HDGREE & TOTINC
-temp<-(NHS.99M001X.E.2011.pumf.individuals_F1[!(NHS.99M001X.E.2011.pumf.individuals_F1$HDGREE==88 | NHS.99M001X.E.2011.pumf.individuals_F1$HDGREE==99),c("PR","HDGREE","TOTINC")])
+NHSsubset.PR_HDGREE_TOTINC  <-(df[!(df$HDGREE==88 | df$HDGREE==99),c("PR","HDGREE","TOTINC")])
 #Aggregate TOTINC on PR and HDGREE to find out total income for each hdgree in each province
-temp.try <- aggregate(TOTINC ~ PR + HDGREE, temp, mean)
+AGG.PR_HDGREE_TOTINC  <- aggregate(TOTINC ~ PR + HDGREE, NHSsubset.PR_HDGREE_TOTINC, mean)
 
 #Merge
-NHS_subset.HdegreePRTOTINC <- merge(NHS_subset.HdegreePRwise, temp.try, all.y=TRUE)
-g<-ggplot(NHS_subset.HdegreePRTOTINC, aes(x=HDGREE, y=TOTINC, size=Freq, frame=PR, color = HDGREE)) + geom_point() + scale_y_log10() + labs(x="Higher Education Degree", y="Total Income", title ="Total Income by Higher Education Degree (Province wise)")
+NHS_subset.HdegreePRTOTINC <- merge(NHS_subset.HdegreePRwise, AGG.PR_HDGREE_TOTINC, all.y=TRUE)
+g<-ggplot(NHS_subset.HdegreePRTOTINC, aes(x=HDGREE, y=TOTINC, size=Freq, frame=PR, color = HDGREE)) + geom_point() + scale_y_log10() + labs(x="Higher Education Degree", y="Total Income", title ="Total Income by Higher Education Degree by Province")
 gganimate(g, interval = 1)
 
 #Jitter Plot
@@ -54,7 +56,7 @@ ggplot(NHS_subset.HdegreePRTOTINC, aes(x=HDGREE, y=TOTINC)) + geom_jitter(aes(co
 #GDP Dataset
 
 #Read the ForecastGDP dataset
-df_forecastgdp <- read.csv(file = "C:\\Data\\Ajinkya\\RealGDP.csv",header = TRUE,strip.white = TRUE,stringsAsFactors = FALSE)
+df_forecastgdp <- read.csv(file = "C:\\RViz\\RealGDP.cs.csv", header = TRUE,strip.white = TRUE,stringsAsFactors = FALSE)
 
 #Subset the annual data for Canada, Mexico & USA
 df_forecastgdp.subset<- subset(df_forecastgdp, subset = ((LOCATION == "MEX" & FREQUENCY =="A") | (LOCATION == "CAN" & FREQUENCY =="A") | (LOCATION == "USA" & FREQUENCY =="A")), select = c(LOCATION, TIME, Value))
@@ -63,19 +65,19 @@ df_forecastgdp.subset$TIME<-gsub('^19',"'",df_forecastgdp.subset$TIME)
 df_forecastgdp.subset$TIME<-gsub('^20',"'",df_forecastgdp.subset$TIME)
 df_forecastgdp.subset$TIME <- factor(df_forecastgdp.subset$TIME, levels = df_forecastgdp.subset$TIME)
 #Plot Forecasted GDP country wise
-ggplot(data = df_forecastgdp.subset,aes(x = TIME, y=Value, group = LOCATION)) + geom_line(aes(color = LOCATION)) + geom_point(aes(color = LOCATION)) + theme(legend.position = "bottom")
+ggplot(data = df_forecastgdp.subset, aes(x = TIME, y=Value, group = LOCATION)) + geom_line(aes(color = LOCATION)) + geom_point(aes(color = LOCATION)) + theme(legend.position = "bottom")
 
-#Read the Real GDP Dataset
-df_gdp <- read.csv(file = "C:\\Data\\Ajinkya\\GDP.csv",header = TRUE,strip.white = TRUE,stringsAsFactors = FALSE)
+#Read in GDP dataset for Millions U.S. Dollars
+df_gdp <- read.csv(file = "C:\\RViz\\GDP.csv",header = TRUE, strip.white = TRUE, stringsAsFactors = FALSE)
 #Subset the data for Canada, Mexico & USA and select only the Million US Dollars  
-df_gdp.subset_MLNUSD <- subset(df_gdp, subset = ((ï..LOCATION == "MEX" & MEASURE =="MLN_USD") | (ï..LOCATION == "CAN" & MEASURE =="MLN_USD") | (ï..LOCATION == "USA" & MEASURE =="MLN_USD")), select = c(ï..LOCATION, TIME, Value))
+df_gdp.subset_MLNUSD <- subset(df_gdp, subset = ((Ã¯..LOCATION == "MEX" & MEASURE =="MLN_USD") | (Ã¯..LOCATION == "CAN" & MEASURE =="MLN_USD") | (Ã¯..LOCATION == "USA" & MEASURE =="MLN_USD")), select = c(Ã¯..LOCATION, TIME, Value))
 colnames(df_gdp.subset_MLNUSD) <- c("LOCATION","TIME","Value")
 #Subset the data for Canada, Mexico & USA and select only the US Dollars/Capita
-df_gdp.subset_USDCAP <- subset(df_gdp, subset = ((ï..LOCATION == "MEX" & MEASURE =="USD_CAP") | (ï..LOCATION == "CAN" & MEASURE =="USD_CAP") | (ï..LOCATION == "USA" & MEASURE =="USD_CAP")), select = c(ï..LOCATION, TIME, Value))
+df_gdp.subset_USDCAP <- subset(df_gdp, subset = ((Ã¯..LOCATION == "MEX" & MEASURE =="USD_CAP") | (Ã¯..LOCATION == "CAN" & MEASURE =="USD_CAP") | (Ã¯..LOCATION == "USA" & MEASURE =="USD_CAP")), select = c(Ã¯..LOCATION, TIME, Value))
 colnames(df_gdp.subset_USDCAP) <- c("LOCATION","TIME","Value")
 
 
-#Plot countryiwse GDP in month MLNUSD and USDCAP.
+#Plot country GDP in MLNUSD and USDCAP.
 ggplot(data = df_gdp.subset_MLNUSD,aes(x = TIME, y=Value, group = LOCATION)) + geom_line(aes(color = LOCATION)) + geom_point(aes(color = LOCATION)) + theme(legend.position = "bottom")
 ggplot(data = df_gdp.subset_USDCAP,aes(x = TIME, y=Value, group = LOCATION)) + geom_line(aes(color = LOCATION)) + geom_point(aes(color = LOCATION)) + theme(legend.position = "bottom")
 
